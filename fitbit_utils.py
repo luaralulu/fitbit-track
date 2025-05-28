@@ -1,5 +1,6 @@
 import datetime
 from datetime import timedelta
+import pytz
 
 def calculate_sleep_metrics(sleep_data):
     # Extract metrics from the API response
@@ -14,14 +15,23 @@ def calculate_sleep_metrics(sleep_data):
 
     return formatted_sleep_time
 
-def get_yesterday_date():
-    today = datetime.date.today()
-    yesterday = today - timedelta(days=1)
+def get_aest_now():
+    """Get current time in AEST timezone."""
+    aest = pytz.timezone('Australia/Sydney')
+    return datetime.datetime.now(aest)
 
+def get_yesterday_date():
+    """Get yesterday's date in AEST timezone."""
+    now = get_aest_now()
+    yesterday = now.date() - timedelta(days=1)
     return yesterday
 
 def get_todays_date():
-    return datetime.date.today()
+    """Get today's date in AEST timezone."""
+    return get_aest_now().date()
 
 def convert_str_to_date(date_str):
-    return datetime.datetime.strptime(date_str, "%Y-%m-%d").date()
+    """Convert string to date in AEST timezone."""
+    aest = pytz.timezone('Australia/Sydney')
+    date = datetime.datetime.strptime(date_str, "%Y-%m-%d").date()
+    return date

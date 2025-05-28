@@ -2,8 +2,8 @@ name: Daily Fitbit Sync
 
 on:
   schedule:
-    # Run at 10:10am AEST (UTC+10) = 00:10 UTC previous day
-    - cron: "10 0 * * *"
+    # Run at 2:00 AM AEST (UTC+10) = 16:00 UTC previous day
+    - cron: "0 16 * * *"
   workflow_dispatch: # Allow manual trigger
 
 jobs:
