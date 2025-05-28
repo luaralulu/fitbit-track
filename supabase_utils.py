@@ -82,7 +82,14 @@ def authenticate_supabase(supabase: Client) -> str:
 
 def insert_fitbit_data(supabase: Client, user_id: str, date: str, steps: int, heart_rate: int, sleep: str, 
                       fat_burn_minutes: int = 0, cardio_minutes: int = 0, peak_minutes: int = 0):
-    """Insert Fitbit data into the Supabase table."""
+    """Insert or update Fitbit data in the Supabase table."""
+    # Check if data already exists for this date
+    existing_data = supabase.table("fitbit_data")\
+        .select("*")\
+        .eq("user_id", user_id)\
+        .eq("date", date)\
+        .execute()
+    
     data = {
         "user_id": user_id,
         "date": date,
@@ -94,7 +101,24 @@ def insert_fitbit_data(supabase: Client, user_id: str, date: str, steps: int, he
         "peak_minutes": peak_minutes
     }
     
-    result = supabase.table("fitbit_data").insert(data).execute()
+    if existing_data.data:
+        existing_record = existing_data.data[0]
+        if existing_record["steps"] == steps:
+            logger.info(f"Data for {date} already exists with same steps, skipping...")
+            return existing_data
+        
+        # Update existing record with new data
+        logger.info(f"Updating existing data for {date} with new values")
+        result = supabase.table("fitbit_data")\
+            .update(data)\
+            .eq("user_id", user_id)\
+            .eq("date", date)\
+            .execute()
+    else:
+        # Insert new record
+        logger.info(f"Inserting new data for {date}")
+        result = supabase.table("fitbit_data").insert(data).execute()
+    
     return result
 
 def insert_activities(supabase: Client, user_id: str, date, activities):
@@ -108,6 +132,19 @@ def insert_activities(supabase: Client, user_id: str, date, activities):
             logger.error(f"Error formatting time for activity {activity['name']}: {e}")
             continue
 
+        # Check if activity already exists
+        existing_activity = supabase.table("fitbit_activities")\
+            .select("*")\
+            .eq("user_id", user_id)\
+            .eq("date", date.strftime('%Y-%m-%d'))\
+            .eq("activity_name", activity['name'])\
+            .eq("duration", activity['duration'])\
+            .execute()
+
+        if existing_activity.data:
+            logger.info(f"Activity {activity['name']} already exists for {date.strftime('%Y-%m-%d')}, skipping...")
+            continue
+
         data = {
             "user_id": user_id,
             "date": date.strftime('%Y-%m-%d'),
@@ -118,6 +155,7 @@ def insert_activities(supabase: Client, user_id: str, date, activities):
             "start_time": formatted_time
         }
         supabase.table("fitbit_activities").insert(data).execute()
+        logger.info(f"Inserted activity {activity['name']} for {date.strftime('%Y-%m-%d')}")
 
 def get_last_recorded_date(supabase: Client, user_id: str) -> str:
     """Get the last recorded date from the Supabase table for a specific user."""
